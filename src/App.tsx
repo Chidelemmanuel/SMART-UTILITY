@@ -1,176 +1,407 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import * as React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { useState } from 'react';
 import { 
-  LayoutGrid, 
+  StyleSheet, 
+  Text, 
+  View, 
+  TouchableOpacity, 
+  SafeAreaView, 
+  ScrollView, 
+  TextInput,
+  Dimensions,
+  Platform
+} from 'react-native';
+import { 
   Ruler, 
   StickyNote, 
   Calculator as CalcIcon, 
-  Timer,
   ChevronLeft,
-  Menu,
-  X,
-  Settings,
-  Info
+  LayoutGrid,
+  Plus,
+  Trash2,
+  Scale,
+  Thermometer,
+  ArrowRightLeft
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import Dashboard from '@/src/components/Dashboard';
-import UnitConverter from '@/src/components/UnitConverter';
-import Notes from '@/src/components/Notes';
-import Calculator from '@/src/components/Calculator';
-import Stopwatch from '@/src/components/Stopwatch';
 
-type View = 'dashboard' | 'converter' | 'notes' | 'calculator' | 'stopwatch';
+const { width } = Dimensions.get('window');
 
-export default function App() {
-  const [currentView, setCurrentView] = React.useState<View>('dashboard');
-  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+// --- Types ---
+type Tool = 'dashboard' | 'converter' | 'notes' | 'calculator';
 
-  const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
-    { id: 'converter', label: 'Unit Converter', icon: Ruler },
-    { id: 'notes', label: 'Smart Notes', icon: StickyNote },
-    { id: 'calculator', label: 'Calculator', icon: CalcIcon },
-    { id: 'stopwatch', label: 'Stopwatch', icon: Timer },
+// --- Components ---
+
+const Dashboard = ({ onSelect }: { onSelect: (tool: Tool) => void }) => {
+  const tools = [
+    { id: 'converter' as Tool, title: 'Unit Converter', icon: Ruler, color: '#3b82f6' },
+    { id: 'notes' as Tool, title: 'Smart Notes', icon: StickyNote, color: '#f59e0b' },
+    { id: 'calculator' as Tool, title: 'Calculator', icon: CalcIcon, color: '#10b981' },
   ];
 
-  const renderView = () => {
-    switch (currentView) {
-      case 'dashboard': return <Dashboard onSelect={(id) => setCurrentView(id as View)} />;
-      case 'converter': return <UnitConverter />;
-      case 'notes': return <Notes />;
-      case 'calculator': return <Calculator />;
-      case 'stopwatch': return <Stopwatch />;
-      default: return <Dashboard onSelect={(id) => setCurrentView(id as View)} />;
+  return (
+    <ScrollView contentContainerStyle={styles.dashboardContainer}>
+      <Text style={styles.headerTitle}>Utility Toolkit</Text>
+      <Text style={styles.headerSubtitle}>Essential tools for your daily tasks</Text>
+      
+      <View style={styles.grid}>
+        {tools.map((tool) => (
+          <TouchableOpacity 
+            key={tool.id} 
+            style={[styles.toolCard, { borderLeftColor: tool.color }]}
+            onPress={() => onSelect(tool.id)}
+          >
+            <View style={[styles.iconContainer, { backgroundColor: tool.color + '20' }]}>
+              <tool.icon size={24} color={tool.color} />
+            </View>
+            <Text style={styles.toolTitle}>{tool.title}</Text>
+            <Text style={styles.toolDesc}>Tap to open</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </ScrollView>
+  );
+};
+
+const UnitConverter = () => {
+  const [value, setValue] = useState('1');
+  const [category, setCategory] = useState('length');
+  
+  // Simplified conversion for demo
+  const result = parseFloat(value) * 1.60934; // Miles to KM example
+
+  return (
+    <View style={styles.toolView}>
+      <Text style={styles.toolHeader}>Unit Converter</Text>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Miles</Text>
+        <TextInput 
+          style={styles.input}
+          value={value}
+          onChangeText={setValue}
+          keyboardType="numeric"
+        />
+      </View>
+      <View style={styles.arrowContainer}>
+        <ArrowRightLeft size={24} color="#666" />
+      </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Kilometers</Text>
+        <View style={styles.resultBox}>
+          <Text style={styles.resultText}>{isNaN(result) ? '0' : result.toFixed(2)}</Text>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+const Notes = () => {
+  const [notes, setNotes] = useState<{id: string, text: string}[]>([]);
+  const [currentNote, setCurrentNote] = useState('');
+
+  const addNote = () => {
+    if (currentNote.trim()) {
+      setNotes([{ id: Date.now().toString(), text: currentNote }, ...notes]);
+      setCurrentNote('');
     }
   };
 
-  const currentTitle = navItems.find(item => item.id === currentView)?.label || 'Toolkit';
+  const deleteNote = (id: string) => {
+    setNotes(notes.filter(n => n.id !== id));
+  };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-foreground font-sans selection:bg-primary/20">
-      {/* Sidebar Overlay */}
-      <AnimatePresence>
-        {isSidebarOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsSidebarOpen(false)}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden"
-          />
+    <View style={styles.toolView}>
+      <Text style={styles.toolHeader}>Smart Notes</Text>
+      <View style={styles.noteInputRow}>
+        <TextInput 
+          style={[styles.input, { flex: 1 }]}
+          placeholder="Type a note..."
+          value={currentNote}
+          onChangeText={setCurrentNote}
+        />
+        <TouchableOpacity style={styles.addButton} onPress={addNote}>
+          <Plus size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
+      <ScrollView style={styles.notesList}>
+        {notes.map(note => (
+          <View key={note.id} style={styles.noteCard}>
+            <Text style={styles.noteText}>{note.text}</Text>
+            <TouchableOpacity onPress={() => deleteNote(note.id)}>
+              <Trash2 size={18} color="#ef4444" />
+            </TouchableOpacity>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+};
+
+const Calculator = () => {
+  const [display, setDisplay] = useState('0');
+  const [equation, setEquation] = useState('');
+  
+  const handlePress = (val: string) => {
+    if (val === '=') {
+      try {
+        // Simple eval-like logic for basic math
+        const result = eval(equation + display);
+        setDisplay(String(result));
+        setEquation('');
+      } catch (e) {
+        setDisplay('Error');
+      }
+    } else if (['+', '-', '*', '/'].includes(val)) {
+      setEquation(display + val);
+      setDisplay('0');
+    } else {
+      if (display === '0') setDisplay(val);
+      else setDisplay(display + val);
+    }
+  };
+
+  return (
+    <View style={styles.toolView}>
+      <Text style={styles.toolHeader}>Calculator</Text>
+      <View style={styles.calcDisplay}>
+        <Text style={styles.calcEquationText}>{equation}</Text>
+        <Text style={styles.calcDisplayText}>{display}</Text>
+      </View>
+      <View style={styles.calcGrid}>
+        {['7','8','9','/','4','5','6','*','1','2','3','-','0','.','=','+'].map(btn => (
+          <TouchableOpacity 
+            key={btn} 
+            style={[styles.calcBtn, btn === '=' && { backgroundColor: '#3b82f6' }]}
+            onPress={() => handlePress(btn)}
+          >
+            <Text style={[styles.calcBtnText, btn === '=' && { color: '#fff' }]}>{btn}</Text>
+          </TouchableOpacity>
+        ))}
+        <TouchableOpacity style={[styles.calcBtn, { width: '100%', marginTop: 10 }]} onPress={() => { setDisplay('0'); setEquation(''); }}>
+          <Text style={styles.calcBtnText}>Clear</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+// --- Main App ---
+
+export default function App() {
+  const [view, setView] = useState<Tool>('dashboard');
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.navbar}>
+        {view !== 'dashboard' && (
+          <TouchableOpacity onPress={() => setView('dashboard')} style={styles.backBtn}>
+            <ChevronLeft size={24} color="#1f2937" />
+          </TouchableOpacity>
         )}
-      </AnimatePresence>
+        <Text style={styles.navTitle}>Toolkit</Text>
+        <View style={{ width: 24 }} />
+      </View>
 
-      {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 bottom-0 w-72 bg-white border-r z-50 transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex flex-col h-full">
-          <div className="p-6 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20">
-                <LayoutGrid className="w-6 h-6" />
-              </div>
-              <span className="font-bold text-xl tracking-tight">Toolkit</span>
-            </div>
-            <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsSidebarOpen(false)}>
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
-
-          <ScrollArea className="flex-1 px-4">
-            <div className="space-y-1 py-2">
-              {navItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setCurrentView(item.id as View);
-                    setIsSidebarOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                    currentView === item.id
-                      ? 'bg-primary text-primary-foreground shadow-md'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`}
-                >
-                  <item.icon className="w-5 h-5" />
-                  {item.label}
-                </button>
-              ))}
-            </div>
-            
-            <Separator className="my-4" />
-            
-            <div className="space-y-1">
-              <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all">
-                <Settings className="w-5 h-5" />
-                Settings
-              </button>
-              <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all">
-                <Info className="w-5 h-5" />
-                About
-              </button>
-            </div>
-          </ScrollArea>
-
-          <div className="p-6 border-t">
-            <div className="p-4 rounded-2xl bg-muted/50 border border-muted flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                EZ
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold truncate">Emmanuel Ozochi</p>
-                <p className="text-[10px] text-muted-foreground truncate">Free Plan</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="lg:ml-72 min-h-screen flex flex-col">
-        {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsSidebarOpen(true)}>
-              <Menu className="w-5 h-5" />
-            </Button>
-            {currentView !== 'dashboard' && (
-              <Button variant="ghost" size="icon" onClick={() => setCurrentView('dashboard')}>
-                <ChevronLeft className="w-5 h-5" />
-              </Button>
-            )}
-            <h2 className="font-bold text-lg">{currentTitle}</h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Settings className="w-5 h-5" />
-            </Button>
-          </div>
-        </header>
-
-        {/* View Content */}
-        <div className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentView}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className="h-full"
-            >
-              {renderView()}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </main>
-    </div>
+      <View style={styles.content}>
+        {view === 'dashboard' && <Dashboard onSelect={setView} />}
+        {view === 'converter' && <UnitConverter />}
+        {view === 'notes' && <Notes />}
+        {view === 'calculator' && <Calculator />}
+      </View>
+    </SafeAreaView>
   );
 }
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  navbar: {
+    height: 60,
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    ...Platform.select({
+      web: {
+        position: 'sticky' as any,
+        top: 0,
+        zIndex: 10,
+      }
+    })
+  },
+  navTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  backBtn: {
+    padding: 4,
+  },
+  content: {
+    flex: 1,
+  },
+  dashboardContainer: {
+    padding: 20,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginBottom: 24,
+  },
+  grid: {
+    gap: 16,
+  },
+  toolCard: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 16,
+    borderLeftWidth: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  toolTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  toolDesc: {
+    fontSize: 14,
+    color: '#9ca3af',
+    marginTop: 2,
+  },
+  toolView: {
+    padding: 20,
+    flex: 1,
+  },
+  toolHeader: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 24,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+  },
+  arrowContainer: {
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  resultBox: {
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  resultText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  noteInputRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  addButton: {
+    backgroundColor: '#3b82f6',
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notesList: {
+    flex: 1,
+  },
+  noteCard: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  noteText: {
+    fontSize: 16,
+    color: '#374151',
+    flex: 1,
+    marginRight: 12,
+  },
+  calcDisplay: {
+    backgroundColor: '#1f2937',
+    padding: 24,
+    borderRadius: 16,
+    alignItems: 'flex-end',
+    marginBottom: 20,
+  },
+  calcDisplayText: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: '700',
+  },
+  calcEquationText: {
+    color: '#9ca3af',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  calcGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'center',
+  },
+  calcBtn: {
+    width: (width - 60) / 4,
+    height: (width - 60) / 4,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  calcBtnText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1f2937',
+  }
+});

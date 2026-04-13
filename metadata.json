@@ -1,5 +1,5 @@
 {
   "name": "Smart Utility Toolkit",
-  "description": "A comprehensive collection of essential everyday tools including unit conversion, notes, and calculation utilities.",
+  "description": "A comprehensive collection of essential everyday tools built with React Native (Web), including unit conversion, notes, and calculation utilities.",
   "requestFramePermissions": []
 }
